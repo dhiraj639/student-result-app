@@ -1,0 +1,5 @@
+Rahul,95
+Aman,72
+Priya,88
+Sneha,39
+Rohit,61
