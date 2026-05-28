@@ -1,5 +1,10 @@
 import java.io.*;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
+
+import com.sun.net.httpserver.HttpServer;
 
 public class StudentApp {
 
@@ -21,42 +26,62 @@ public class StudentApp {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        List<Student> students = new ArrayList<>();
+        HttpServer server = HttpServer.create(
+                new InetSocketAddress(8000), 0);
 
-        try {
-            BufferedReader reader = new BufferedReader(
-                    new FileReader("students.txt"));
+        server.createContext("/", exchange -> {
 
-            String line;
+            List<Student> students = new ArrayList<>();
 
-            while ((line = reader.readLine()) != null) {
+            List<String> lines =
+                    Files.readAllLines(Paths.get("students.txt"));
+
+            for (String line : lines) {
 
                 String[] data = line.split(",");
 
-                String name = data[0];
-                int marks = Integer.parseInt(data[1]);
-
-                students.add(new Student(name, marks));
+                students.add(
+                        new Student(
+                                data[0],
+                                Integer.parseInt(data[1])
+                        )
+                );
             }
 
-            reader.close();
+            StringBuilder response = new StringBuilder();
 
-        } catch (Exception e) {
-            System.out.println("Error reading file.");
-            return;
-        }
+            response.append("<h1>Student Report</h1>");
 
-        System.out.println("\n===== STUDENT REPORT =====\n");
+            for (Student s : students) {
 
-        for (Student s : students) {
+                response.append("<p>")
+                        .append("Name: ")
+                        .append(s.name)
+                        .append("<br>Marks: ")
+                        .append(s.marks)
+                        .append("<br>Grade: ")
+                        .append(s.getGrade())
+                        .append("</p><hr>");
+            }
 
-            System.out.println("Name   : " + s.name);
-            System.out.println("Marks  : " + s.marks);
-            System.out.println("Grade  : " + s.getGrade());
+            exchange.sendResponseHeaders(
+                    200,
+                    response.toString().getBytes().length
+            );
 
-            System.out.println("--------------------------");
-        }
+            OutputStream os = exchange.getResponseBody();
+
+            os.write(response.toString().getBytes());
+
+            os.close();
+        });
+
+        server.start();
+
+        System.out.println(
+                "Server started on port 8000"
+        );
     }
 }
